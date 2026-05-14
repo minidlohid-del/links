@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KiwiCayAndLinks</title>
+    <script src="https://cdn.jsdelivr.net/npm/appwrite@13.0.1"></script>
+    <style>
+        body { background-color: #000; color: #fff; font-family: sans-serif; margin: 0; padding: 0; }
+        header { display: flex; justify-content: space-between; padding: 20px; background: #111; border-bottom: 1px solid #333; }
+        .menu-btn { cursor: pointer; font-size: 24px; }
+        .admin-section { padding: 20px; text-align: right; }
+        .btn { background: #fff; color: #000; border: none; padding: 10px 20px; cursor: pointer; font-weight: bold; }
+        .container { padding: 20px; max-width: 800px; margin: auto; }
+        .card { background: #111; border: 1px solid #333; padding: 15px; margin-bottom: 15px; border-radius: 5px; }
+        .card h3 { margin-top: 0; }
+        #bot-alex { position: fixed; bottom: 20px; right: 20px; background: #fff; color: #000; padding: 15px; border-radius: 10px; width: 250px; display: none; box-shadow: 0 0 10px rgba(255,255,255,0.2); }
+        #bot-trigger { position: fixed; bottom: 20px; right: 20px; background: #fff; color: #000; padding: 10px 20px; border-radius: 50px; cursor: pointer; font-weight: bold; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="menu-btn" onclick="toggleMenu()">☰</div>
+    <div id="auth-status">
+        <button class="btn" id="login-btn" onclick="showLogin()">Войти (adm)</button>
+    </div>
+</header>
+
+<div class="container" id="main-content">
+    <h1>Новости</h1>
+    <div id="news-list">Загрузка новостей...</div>
+    
+    <div id="admin-controls" class="hidden">
+        <hr>
+        <h3>Панель управления</h3>
+        <textarea id="new-content" placeholder="Текст новости" style="width:100%; height:80px;"></textarea><br><br>
+        <button class="btn" onclick="addNews()">Добавить новость</button>
+    </div>
+</div>
+
+<!-- Окно бота Алексея -->
+<div id="bot-trigger" onclick="toggleBot()">Помощь (Алексей)</div>
+<div id="bot-alex">
+    <strong>Бот Алексей</strong>
+    <p id="bot-text">Привет! Я помогу с VPN и играми. Что тебя интересует?</p>
+    <input type="text" id="bot-input" placeholder="Спроси меня..." style="width: 80%">
+    <button onclick="askBot()">➜</button>
+    <button onclick="toggleBot()" style="margin-top:10px; display:block; background:none; border:none; color:grey; font-size:12px; cursor:pointer;">Закрыть</button>
+</div>
+
+<script>
+    const sdk = new Appwrite.Client();
+    sdk.setEndpoint('https://cloud.appwrite.io/v1').setProject('6a060e85002b596f5eb8');
+    const databases = new Appwrite.Databases(sdk);
+    const account = new Appwrite.Account(sdk);
+
+    const DB_ID = '6a060ed50024663c678c';
+    const NEWS_COL = 'news';
+
+    // Загрузка новостей
+    async function loadNews() {
+        try {
+            const response = await databases.listDocuments(DB_ID, NEWS_COL);
+            const list = document.getElementById('news-list');
+            list.innerHTML = response.documents.map(doc => `
+                <div class="card">
+                    <p>${doc.content}</p>
+                    ${isAdmin ? `<button onclick="deleteDoc('${doc.$id}')" style="color:red; background:none; border:none; cursor:pointer;">Удалить</button>` : ''}
+                </div>
+            `).join('');
+        } catch (e) { console.error(e); }
+    }
+
+    let isAdmin = false;
+
+    // Вход для adm
+    async function showLogin() {
+        const pass = prompt("Введите пароль для adm:");
+        if (pass === "loh_7766") {
+            try {
+                await account.createEmailSession('adm@a.com', 'loh_7766');
+                checkAdmin();
+            } catch (e) { alert("Ошибка входа"); }
+        } else { alert("Неверный пароль"); }
+    }
+
+    async function checkAdmin() {
+        try {
+            const user = await account.get();
+            if (user.name === 'adm' || user.$id === 'adm') {
+                isAdmin = true;
+                document.getElementById('admin-controls').classList.remove('hidden');
+                document.getElementById('login-btn').innerText = "Выйти";
+                document.getElementById('login-btn').onclick = logout;
+            }
+            loadNews();
+        } catch (e) { loadNews(); }
+    }
+
+    async function logout() {
+        await account.deleteSession('current');
+        location.reload();
+    }
+
+    async function addNews() {
+        const content = document.getElementById('new-content').value;
+        if (!content) return;
+        await databases.createDocument(DB_ID, NEWS_COL, 'unique()', { content });
+        document.getElementById('new-content').value = '';
+        loadNews();
+    }
+
+    async function deleteDoc(id) {
+        if (confirm("Удалить запись?")) {
+            await databases.deleteDocument(DB_ID, NEWS_COL, id);
+            loadNews();
+        }
+    }
+
+    // Бот Алексей
+    function toggleBot() {
+        const bot = document.getElementById('bot-alex');
+        bot.style.display = bot.style.display === 'block' ? 'none' : 'block';
+    }
+
+    function askBot() {
+        const input = document.getElementById('bot-input').value.toLowerCase();
+        const text = document.getElementById('bot-text');
+        if (input.includes('vpn') || input.includes('хапп')) text.innerText = "Ключи для VPN (Хапп) лежат в соответствующем разделе меню!";
+        else if (input.includes('диск')) text.innerText = "Все игры залиты на Google Диск, ссылки в разделе 'Игры'.";
+        else text.innerText = "Я пока только учусь, но скоро буду знать больше о проекте KiwiCayAndLinks!";
+        document.getElementById('bot-input').value = '';
+    }
+
+    function toggleMenu() { alert("Разделы Ключи и Игры настраиваются аналогично новостям!"); }
+
+    checkAdmin();
+</script>
+</body>
+</html>
