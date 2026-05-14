@@ -61,8 +61,8 @@
     let isAdmin = false;
 
     async function register() {
-        const n = prompt("Ник:"); const p = prompt("Пароль (8+ символов):");
-        if(n && p) try { await acc.create('unique()', `${n}@a.com`, p, n); alert("Готово!"); } catch(e) { alert(e.message); }
+        const n = prompt("Ник:"); const p = prompt("Пароль (мин. 8 символов):");
+        if(n && p) try { await acc.create('unique()', `${n}@a.com`, p, n); alert("Регистрация успешна!"); } catch(e) { alert(e.message); }
     }
 
     async function login() {
@@ -75,6 +75,7 @@
             const user = await acc.get();
             document.getElementById('auth-ui').style.display = 'none';
             document.getElementById('user-ui').style.display = 'flex';
+            // Проверка на админа по нику "adm"
             if(user.name === 'adm') {
                 isAdmin = true;
                 document.getElementById('admin-ui').style.display = 'block';
@@ -92,8 +93,8 @@
         
         const fields = document.getElementById('admin-fields');
         if (tab === 'news') fields.innerHTML = '<textarea id="v1" placeholder="Текст новости..."></textarea>';
-        if (tab === 'keys') fields.innerHTML = '<input id="v1" placeholder="Заголовок"><input id="v2" placeholder="Описание"><input id="v3" placeholder="Ключ/Ссылка">';
-        if (tab === 'links') fields.innerHTML = '<input id="v1" placeholder="Название игры"><input id="v2" placeholder="Инфо"><input id="v3" placeholder="Ссылка">';
+        if (tab === 'keys') fields.innerHTML = '<input id="v1" placeholder="Сервис (title)"><input id="v2" placeholder="Описание"><input id="v3" placeholder="Ключ (url)">';
+        if (tab === 'links') fields.innerHTML = '<input id="v1" placeholder="Название игры (game_name)"><input id="v2" placeholder="Инфо (description)"><input id="v3" placeholder="Ссылка (url)">';
         
         loadData();
     }
@@ -107,7 +108,7 @@
                 <div class="card">
                     <h3>${d.content || d.title || d.game_name || 'Без названия'}</h3>
                     <p>${d.description || ''}</p>
-                    ${d.url ? `<a href="${d.url}" target="_blank" class="btn-white" style="display:block; text-align:center; text-decoration:none">ОТКРЫТЬ</a>` : ''}
+                    ${d.url ? `<a href="${d.url}" target="_blank" class="btn-white" style="display:block; text-align:center; text-decoration:none">ОТКРЫТЬ / СКАЧАТЬ</a>` : ''}
                     ${isAdmin ? `<button onclick="drop('${d.$id}')" style="color:red; background:none; border:none; margin-top:10px; cursor:pointer">Удалить</button>` : ''}
                 </div>
             `).join('');
@@ -120,20 +121,21 @@
         const v2 = document.getElementById('v2')?.value;
         const v3 = document.getElementById('v3')?.value;
 
+        // Важно: названия полей должны СТРОГО совпадать с колонками в Appwrite
         if (currentTab === 'news') data.content = v1;
         if (currentTab === 'keys') { data.title = v1; data.description = v2; data.url = v3; }
         if (currentTab === 'links') { data.game_name = v1; data.description = v2; data.url = v3; }
 
         try {
             await db.createDocument(DB_ID, currentTab, 'unique()', data);
-            alert("Опубликовано!");
+            alert("Запись добавлена!");
             loadData();
         } catch (e) { alert("Ошибка: " + e.message); }
     }
 
     async function drop(id) {
-        if(confirm("Удалить?")) {
-            try { await db.deleteDocument(DB_ID, currentTab, id); loadData(); } catch(e) { alert("Ошибка удаления"); }
+        if(confirm("Удалить запись?")) {
+            try { await db.deleteDocument(DB_ID, currentTab, id); loadData(); } catch(e) { alert("Не удалось удалить"); }
         }
     }
 
