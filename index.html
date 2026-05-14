@@ -22,8 +22,8 @@
         
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; padding: 40px; max-width: 1200px; margin: 0 auto; }
         .card { background: var(--card); border: 1px solid var(--border); padding: 24px; border-radius: 12px; }
+        .data-display { background: #111; padding: 10px; border-radius: 6px; border: 1px dashed #444; color: #0f0; font-family: monospace; word-break: break-all; margin-top: 10px; }
 
-        /* АЛЕКСЕЙ ИИ СТИЛИ */
         #alexey-ui { position: fixed; bottom: 20px; right: 20px; z-index: 1000; }
         #alexey-chat { width: 320px; height: 450px; background: #0a0a0a; border: 1px solid #333; border-radius: 12px; display: none; flex-direction: column; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
         #chat-window { flex: 1; padding: 15px; overflow-y: auto; font-size: 0.9rem; display: flex; flex-direction: column; gap: 10px; color: #eee; }
@@ -85,7 +85,6 @@
     const acc = new Appwrite.Account(client);
     const DB_ID = '6a060ed50024663c678c';
     
-    // Твой API ключ DeepSeek
     const DEEPSEEK_KEY = 'sk-c13bbf2c1a924ed68f4961c4663829d7'; 
 
     let currentTab = 'news';
@@ -139,8 +138,8 @@
                 <div class="card">
                     <h3>${d.content || d.title || d.game_name}</h3>
                     <p>${d.description || ''}</p>
-                    ${d.url ? `<a href="${d.url}" target="_blank" class="btn-white" style="display:block; text-align:center; text-decoration:none">ОТКРЫТЬ</a>` : ''}
-                    ${isAdmin ? `<button onclick="drop('${d.$id}')" style="color:red; background:none; border:none; cursor:pointer">Удалить</button>` : ''}
+                    ${d.url ? `<div class="data-display">${d.url}</div>` : ''}
+                    ${isAdmin ? `<button onclick="drop('${d.$id}')" style="color:red; background:none; border:none; cursor:pointer; margin-top:10px">Удалить</button>` : ''}
                 </div>
             `).join('');
         } catch(e) { grid.innerHTML = 'Пусто'; }
@@ -155,13 +154,12 @@
             await db.createDocument(DB_ID, currentTab, 'unique()', data); 
             loadData(); 
         } catch (e) { 
-            alert("Ошибка! Проверь в Appwrite вкладку Settings -> Permissions. Должна стоять галочка Create для Role: Any."); 
+            alert("Ошибка! Проверь права доступа в Appwrite (Settings -> Permissions -> Any)."); 
         }
     }
 
     async function drop(id) { await db.deleteDocument(DB_ID, currentTab, id); loadData(); }
 
-    /* ЛОГИКА АЛЕКСЕЯ */
     function toggleAlexey() { const c = document.getElementById('alexey-chat'); c.style.display = c.style.display === 'flex' ? 'none' : 'flex'; }
     
     async function askAlexey() {
@@ -191,7 +189,7 @@
                     messages: [
                         {
                             "role": "system", 
-                            "content": "Ты — Алексей, помощник на сайте KiwiCayAndLinks. Твоя цель: помогать с VPN, Google-дисками и вопросами про сайт. Ты не DeepSeek, ты Алексей. Отвечай кратко и по делу."
+                            "content": "Ты — Алексей, помощник на сайте KiwiCayAndLinks. Ты помогаешь с VPN и играми. Будь краток."
                         },
                         {"role": "user", "content": userMsg}
                     ]
@@ -200,7 +198,7 @@
             const result = await response.json();
             botMsgDiv.innerText = result.choices[0].message.content;
         } catch(e) {
-            botMsgDiv.innerText = "Ошибка связи. Проверь баланс API или настройки сети.";
+            botMsgDiv.innerText = "Ошибка связи.";
         }
         chatWin.scrollTop = chatWin.scrollHeight;
     }
